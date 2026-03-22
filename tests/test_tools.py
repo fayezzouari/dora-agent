@@ -1,16 +1,16 @@
+import queue
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "nodes", "agent_bridge"))
 
-from tools import RobotState, RobotCommand, RobotTools
-import math
+from tools import RobotState, RobotTools, Command
 
 
 def make_tools():
     state = RobotState()
-    command = RobotCommand()
-    tools = RobotTools(state, command)
-    return state, command, tools
+    cmd_queue = queue.Queue()
+    tools = RobotTools(state, cmd_queue)
+    return state, cmd_queue, tools
 
 
 def test_robot_state_update_from_flat():
@@ -31,53 +31,49 @@ def test_robot_state_to_description():
 
 def test_robot_state_heading():
     state = RobotState()
-    # No rotation: heading should be 0 degrees
     state.update_from_flat([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0])
     assert abs(state.heading_degrees()) < 0.1
 
 
-def test_move_tool_forward():
-    state, command, tools = make_tools()
-    result = tools.move(vx=0.5)
-    assert command.command_type == "move"
-    assert command.velocity[0] == pytest_approx(0.5)
-    assert "0.50" in result
+def test_move_tool_puts_command():
+    _, cmd_queue, tools = make_tools()
+    tools.move(vx=0.5)
+    assert not cmd_queue.empty()
+    cmd = cmd_queue.get_nowait()
+    assert cmd.type == "move"
+    assert abs(cmd.velocity[0] - 0.5) < 0.01
 
 
 def test_move_tool_clamps_speed():
-    state, command, tools = make_tools()
+    _, cmd_queue, tools = make_tools()
     tools.move(vx=99.0)
-    assert command.velocity[0] <= 2.0
+    cmd = cmd_queue.get_nowait()
+    assert cmd.velocity[0] <= 2.0
 
 
-def test_stop_tool():
-    state, command, tools = make_tools()
-    tools.move(vx=1.0)
-    result = tools.stop()
-    assert command.command_type == "stop"
-    assert command.velocity == (0.0, 0.0, 0.0)
-    assert "stopped" in result.lower()
+def test_stop_tool_puts_command():
+    _, cmd_queue, tools = make_tools()
+    tools.stop()
+    cmd = cmd_queue.get_nowait()
+    assert cmd.type == "stop"
 
 
 def test_get_state_tool_returns_string():
-    state, command, tools = make_tools()
+    _, _, tools = make_tools()
     result = tools.get_state()
     assert isinstance(result, str)
     assert len(result) > 0
 
 
-def test_robot_command_reset():
-    command = RobotCommand(command_type="move", velocity=(1.0, 0.0, 0.0))
-    command.reset()
-    assert command.command_type == "none"
-    assert command.velocity == (0.0, 0.0, 0.0)
-
-
-def pytest_approx(value, rel=1e-3):
-    import math
-    class Approx:
-        def __eq__(self, other):
-            return abs(other - value) <= rel * max(abs(value), abs(other), 1e-10)
-        def __repr__(self):
-            return f"~{value}"
-    return Approx()
+def test_move_with_duration_puts_two_commands():
+    _, cmd_queue, tools = make_tools()
+    # Use a tiny duration so the test doesn't actually sleep long
+    # We monkeypatch time.sleep to avoid waiting
+    import unittest.mock as mock
+    with mock.patch("time.sleep"):
+        tools.move(vx=0.5, duration=2.0)
+    assert cmd_queue.qsize() == 2
+    first = cmd_queue.get_nowait()
+    second = cmd_queue.get_nowait()
+    assert first.type == "move"
+    assert second.type == "stop"
