@@ -68,10 +68,11 @@ def main() -> None:
         pb.resetBasePositionAndOrientation(
             robot_id, [x, y, z], quat, physicsClientId=client
         )
+        cam = pb.getDebugVisualizerCamera(physicsClientId=client)
         pb.resetDebugVisualizerCamera(
-            cameraDistance=5,
-            cameraYaw=0,
-            cameraPitch=-89,
+            cameraDistance=cam[10],
+            cameraYaw=cam[8],
+            cameraPitch=cam[9],
             cameraTargetPosition=[x, y, 0],
             physicsClientId=client,
         )
