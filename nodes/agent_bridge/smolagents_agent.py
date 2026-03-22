@@ -61,8 +61,32 @@ def _make_smolagents_tools(robot_tools: RobotTools) -> list:
         def forward(self) -> str:
             return self._rt.get_state()
 
+    class TurnRobotTool(Tool):
+        name = "turn_robot"
+        description = (
+            "Turn the robot by an exact angle in degrees. "
+            "Positive = left (counterclockwise), negative = right (clockwise). "
+            "Use this instead of move_robot for precise turns. "
+            "Example: turn_robot(degrees=90) turns left 90 degrees exactly."
+        )
+        inputs = {
+            "degrees": {
+                "type": "number",
+                "description": "Angle in degrees. 90 = quarter-turn left, -90 = quarter-turn right.",
+            }
+        }
+        output_type = "string"
+
+        def __init__(self, rt: RobotTools) -> None:
+            self._rt = rt
+            super().__init__()
+
+        def forward(self, degrees: float) -> str:
+            return self._rt.turn(degrees=degrees)
+
     return [
         MoveRobotTool(robot_tools),
+        TurnRobotTool(robot_tools),
         StopRobotTool(robot_tools),
         GetRobotStateTool(robot_tools),
     ]
