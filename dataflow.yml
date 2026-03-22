@@ -1,0 +1,27 @@
+nodes:
+  - id: simulation
+    path: nodes/simulation/node.py
+    inputs:
+      tick: dora/timer/millis/50
+      velocity_cmd: agent_bridge/velocity_cmd
+      stop_cmd: agent_bridge/stop_cmd
+    outputs:
+      - robot_state
+
+  - id: agent_bridge
+    path: nodes/agent_bridge/node.py
+    inputs:
+      tick: dora/timer/millis/100
+      user_command: cli_interface/user_command
+      robot_state: simulation/robot_state
+    outputs:
+      - velocity_cmd
+      - stop_cmd
+      - agent_response
+
+  - id: cli_interface
+    path: nodes/cli_interface/node.py
+    inputs:
+      agent_response: agent_bridge/agent_response
+    outputs:
+      - user_command
