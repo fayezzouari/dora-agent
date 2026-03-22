@@ -88,18 +88,33 @@ class RobotTools:
             desc += f" for {duration:.1f}s"
         return f"Moving: {desc}"
 
-    def turn(self, degrees: float, speed_deg_per_sec: float = 90.0) -> str:
+    def turn(self, degrees: float, speed_deg_per_sec: float = 45.0) -> str:
         """
-        Turn the robot by an exact angle.
+        Turn the robot by an exact angle using closed-loop heading control.
         degrees: positive = left (counterclockwise), negative = right (clockwise).
-        The duration is computed automatically so the angle is always correct.
+        Polls the live heading from robot_state and stops when the target is reached,
+        so errors do not accumulate across repeated turns.
         """
         degrees = float(max(-360.0, min(360.0, degrees)))
-        speed_deg_per_sec = float(max(10.0, min(360.0, speed_deg_per_sec)))
+        speed_deg_per_sec = float(max(10.0, min(180.0, speed_deg_per_sec)))
+
+        start_heading = self.state.heading_degrees()
+        target_heading = start_heading + degrees
+
         wz = math.radians(speed_deg_per_sec) * (1.0 if degrees > 0 else -1.0)
-        duration = abs(degrees) / speed_deg_per_sec
         self.cmd_queue.put(Command("move", (0.0, 0.0, wz)))
-        time.sleep(duration)
+
+        tolerance_deg = 1.5
+        timeout = abs(degrees) / speed_deg_per_sec * 2.0  # safety cap
+        deadline = time.time() + timeout
+
+        while time.time() < deadline:
+            current = self.state.heading_degrees()
+            diff = (target_heading - current + 180.0) % 360.0 - 180.0
+            if abs(diff) <= tolerance_deg:
+                break
+            time.sleep(0.02)
+
         self.cmd_queue.put(Command("stop"))
         return f"Turned {degrees:+.0f} degrees"
 
