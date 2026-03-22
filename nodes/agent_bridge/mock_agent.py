@@ -61,9 +61,9 @@ class MockAgent:
         if action == "backward":
             return self.tools.move(vx=-speed, duration=duration)
         if action == "left":
-            return self.tools.move(vx=0.0, wz=speed, duration=duration)
+            return self.tools.turn(degrees=90)
         if action == "right":
-            return self.tools.move(vx=0.0, wz=-speed, duration=duration)
+            return self.tools.turn(degrees=-90)
         if action == "state":
             return self.tools.get_state()
         return "No action taken."
