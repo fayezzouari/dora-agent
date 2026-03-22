@@ -6,6 +6,9 @@ except ImportError:
     from tools import RobotTools  # type: ignore[no-redef]
 
 
+DEFAULT_DURATION = 2.0  # seconds a movement command runs before auto-stopping
+
+
 class MockAgent:
     """
     Keyword-based agent that requires no external API.
@@ -25,13 +28,13 @@ class MockAgent:
         self.tools = robot_tools
 
     def run(self, user_input: str) -> str:
-        self.tools.command.reset()
         text = user_input.lower().strip()
         speed = self._extract_speed(text)
+        duration = self._extract_duration(text)
 
         for pattern, action in self._PATTERNS:
             if re.search(pattern, text):
-                return self._dispatch(action, speed)
+                return self._dispatch(action, speed, duration)
 
         return (
             "Unknown command. Try: move forward, move backward, turn left, "
@@ -41,21 +44,26 @@ class MockAgent:
     def _extract_speed(self, text: str) -> float:
         match = re.search(r"(\d+(?:\.\d+)?)\s*(?:m(?:/s)?)?", text)
         if match:
-            speed = float(match.group(1))
-            return max(0.1, min(2.0, speed))
+            return max(0.1, min(2.0, float(match.group(1))))
         return 0.5
 
-    def _dispatch(self, action: str, speed: float) -> str:
+    def _extract_duration(self, text: str) -> float:
+        match = re.search(r"for\s+(\d+(?:\.\d+)?)\s*(?:s(?:ec(?:ond)?s?)?)?", text)
+        if match:
+            return max(0.1, min(30.0, float(match.group(1))))
+        return DEFAULT_DURATION
+
+    def _dispatch(self, action: str, speed: float, duration: float) -> str:
         if action == "stop":
             return self.tools.stop()
         if action == "forward":
-            return self.tools.move(vx=speed)
+            return self.tools.move(vx=speed, duration=duration)
         if action == "backward":
-            return self.tools.move(vx=-speed)
+            return self.tools.move(vx=-speed, duration=duration)
         if action == "left":
-            return self.tools.move(vx=0.0, wz=speed)
+            return self.tools.move(vx=0.0, wz=speed, duration=duration)
         if action == "right":
-            return self.tools.move(vx=0.0, wz=-speed)
+            return self.tools.move(vx=0.0, wz=-speed, duration=duration)
         if action == "state":
             return self.tools.get_state()
         return "No action taken."
