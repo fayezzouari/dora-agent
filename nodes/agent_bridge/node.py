@@ -4,7 +4,7 @@ Agent bridge node — connects the AI agent to the Dora dataflow.
 Inputs:
   user_command  : string array  — command from the CLI interface
   robot_state   : float32[10]   — [px,py,pz, ox,oy,oz,ow, vx,vy,vz] from simulation
-  tick          : timer         — periodic heartbeat for polling the agent future
+  tick          : timer         — periodic heartbeat
 
 Outputs:
   velocity_cmd  : float32[3]    — [vx, vy, wz] sent to simulation
@@ -13,6 +13,7 @@ Outputs:
 """
 
 import os
+import queue as std_queue
 import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor, Future
@@ -23,7 +24,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import pyarrow as pa
 from dora import Node
 
-from tools import RobotState, RobotCommand, RobotTools
+from tools import RobotState, RobotTools
 from mock_agent import MockAgent
 
 
@@ -41,44 +42,46 @@ def main() -> None:
     node = Node()
 
     state = RobotState()
-    command = RobotCommand()
-    robot_tools = RobotTools(state, command)
+    cmd_queue: std_queue.Queue = std_queue.Queue()
+    robot_tools = RobotTools(state, cmd_queue)
     agent = _create_agent(robot_tools)
 
     executor = ThreadPoolExecutor(max_workers=1)
     pending_future: Optional[Future] = None
     state_lock = threading.Lock()
 
-    def run_agent(text: str) -> str:
-        return agent.run(text)
+    def drain_commands() -> None:
+        """Flush all pending robot commands from the queue to the Dora outputs."""
+        while True:
+            try:
+                cmd = cmd_queue.get_nowait()
+            except std_queue.Empty:
+                break
+            if cmd.type == "move":
+                node.send_output(
+                    "velocity_cmd",
+                    pa.array(list(cmd.velocity), type=pa.float32()),
+                )
+            elif cmd.type == "stop":
+                node.send_output("stop_cmd", pa.array([1], type=pa.int8()))
 
-    def dispatch_command() -> None:
-        vx, vy, wz = command.velocity
-        if command.command_type == "move":
-            node.send_output(
-                "velocity_cmd",
-                pa.array([vx, vy, wz], type=pa.float32()),
-            )
-        elif command.command_type == "stop":
-            node.send_output("stop_cmd", pa.array([1], type=pa.int8()))
+    def finish_future(future: Future) -> None:
+        try:
+            response = future.result()
+        except Exception as exc:
+            response = f"Error: {exc}"
+        drain_commands()
+        node.send_output("agent_response", pa.array([response], type=pa.string()))
 
     while True:
+        # Always drain any commands the agent thread produced before waiting.
+        drain_commands()
+
         event = node.next(timeout=0.01)
 
         if event is None:
             if pending_future is not None and pending_future.done():
-                try:
-                    response = pending_future.result()
-                    dispatch_command()
-                    node.send_output(
-                        "agent_response",
-                        pa.array([response], type=pa.string()),
-                    )
-                except Exception as exc:
-                    node.send_output(
-                        "agent_response",
-                        pa.array([f"Error: {exc}"], type=pa.string()),
-                    )
+                finish_future(pending_future)
                 pending_future = None
             continue
 
@@ -107,22 +110,11 @@ def main() -> None:
                     ),
                 )
             else:
-                pending_future = executor.submit(run_agent, text)
+                pending_future = executor.submit(agent.run, text)
 
         elif input_id == "tick":
             if pending_future is not None and pending_future.done():
-                try:
-                    response = pending_future.result()
-                    dispatch_command()
-                    node.send_output(
-                        "agent_response",
-                        pa.array([response], type=pa.string()),
-                    )
-                except Exception as exc:
-                    node.send_output(
-                        "agent_response",
-                        pa.array([f"Error: {exc}"], type=pa.string()),
-                    )
+                finish_future(pending_future)
                 pending_future = None
 
     executor.shutdown(wait=False)
