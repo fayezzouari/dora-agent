@@ -6,7 +6,10 @@ Send natural language commands from a CLI and watch a simulated robot execute th
 ## Architecture
 
 ```
-stdin
+./robot (CLI)
+  |
+  v
+/tmp/dora-robot (FIFO)
   |
   v
 [cli_interface] --user_command--> [agent_bridge] --velocity_cmd/stop_cmd--> [simulation]
@@ -17,7 +20,7 @@ stdin
 ```
 
 **Nodes:**
-- `cli_interface` — reads user input from stdin, prints agent responses
+- `cli_interface` — reads commands from a named pipe (`/tmp/dora-robot`), prints agent responses
 - `agent_bridge` — dispatches commands to the agent, translates results to motor commands
 - `simulation` — kinematic robot model in PyBullet, publishes pose/velocity state
 
@@ -73,26 +76,62 @@ export ANTHROPIC_API_KEY=sk-ant-...
 AGENT_TYPE=smolagents dora run dataflow.yml
 ```
 
-## Example Commands
+## Sending Commands
 
+The pipeline reads commands from a named pipe at `/tmp/dora-robot`.
+Use the included `robot` CLI to send them — no need to type `echo ... > /tmp/dora-robot` manually.
+
+### Single command
+
+```bash
+./robot stop
+./robot move forward
+./robot "move in the shape of a square"
+./robot "move forward for 5 seconds"
 ```
+
+### Interactive session
+
+```bash
+./robot
 > move forward
-Agent: Moving: vx=0.50 m/s
-
-> move forward at 1.5
-Agent: Moving: vx=1.50 m/s
-
 > turn left
-Agent: Moving: wz=0.50 rad/s
-
-> stop
-Agent: Robot stopped.
-
+> move in the shape of a square
 > status
-Agent: Position: (2.50, 0.00, 0.25) m, Heading: 0.0 deg, Velocity: (1.50, 0.00) m/s
-
 > quit
 ```
+
+To use `robot` from anywhere, add the project directory to your PATH:
+
+```bash
+export PATH="$PATH:/home/fayez/projects/dora-agentic-control"
+```
+
+### Direct pipe (alternative)
+
+```bash
+echo "move forward" > /tmp/dora-robot
+```
+
+Use a custom pipe path with:
+
+```bash
+ROBOT_FIFO=/tmp/my-robot dora run dataflow.yml
+ROBOT_FIFO=/tmp/my-robot ./robot "move forward"
+```
+
+## Example Commands
+
+| Command | Effect |
+|---|---|
+| `move forward` | Move forward at 0.5 m/s for 2 s |
+| `move forward at 1.5` | Move forward at 1.5 m/s for 2 s |
+| `move forward for 5 seconds` | Move forward for 5 s |
+| `turn left` | Rotate 90° counterclockwise |
+| `turn right` | Rotate 90° clockwise |
+| `stop` | Halt immediately |
+| `status` | Report current position and heading |
+| `move in the shape of a square` | LLM plans and executes a square path |
 
 ## Running Tests
 
