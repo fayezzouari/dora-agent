@@ -75,7 +75,7 @@ class SmolagentsAgent:
 
     def __init__(self, robot_tools: RobotTools) -> None:
         try:
-            from smolagents import ToolCallingAgent, InferenceClientModel, OpenAIServerModel
+            from smolagents import CodeAgent, InferenceClientModel, OpenAIServerModel
         except ImportError:
             raise ImportError(
                 "smolagents is not installed. Run: pip install 'dora-agentic-control[smolagents]'"
@@ -102,7 +102,7 @@ class SmolagentsAgent:
                 "or use AGENT_TYPE=mock for offline operation."
             )
 
-        self._agent = ToolCallingAgent(tools=tools, model=model, max_steps=3)
+        self._agent = CodeAgent(tools=tools, model=model, max_steps=3)
 
     def run(self, user_input: str) -> str:
         system_prompt = (
