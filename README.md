@@ -16,13 +16,13 @@ Send natural language commands from a CLI and watch a simulated robot execute th
       ^                                  |                                        |
       |                                  |                                        |
 [agent_response] <--------------------[agent]                             [robot_state]
-                                   (mock or LLM)
+                                   (mock or Groq)
 ```
 
 **Nodes:**
 - `cli_interface` — reads commands from a named pipe (`/tmp/dora-robot`), prints agent responses
-- `agent_bridge` — dispatches commands to the agent, translates results to motor commands
-- `simulation` — kinematic robot model in PyBullet, publishes pose/velocity state
+- `agent_bridge` — runs the agent in a background thread, dispatches motor commands in real-time
+- `simulation` — headless kinematic robot model; loads PyBullet GUI when `PYBULLET_GUI=1`
 
 **Messages:**
 | ID | Type | Format |
@@ -36,15 +36,13 @@ Send natural language commands from a CLI and watch a simulated robot execute th
 ## Prerequisites
 
 - Python 3.10+
-- `dora-rs` CLI: `pip install dora-rs-cli` (provides the `dora` command)
+- Dora CLI: `pip install dora-rs-cli`
 
 ## Setup
 
 ```bash
-# Install Python dependencies
 pip install -e .
 
-# For LLM-powered agent (optional)
 pip install -e ".[smolagents]"
 ```
 
@@ -56,30 +54,30 @@ pip install -e ".[smolagents]"
 dora run dataflow.yml
 ```
 
-### With PyBullet GUI (visual simulation)
+### With PyBullet GUI
 
 ```bash
 PYBULLET_GUI=1 dora run dataflow.yml
 ```
 
-### With LLM-powered agent (Hugging Face)
+The camera starts top-down. Use mouse to rotate/zoom freely — the camera follows the robot position automatically.
+
+### With Groq LLM agent
 
 ```bash
-export HUGGINGFACE_API_TOKEN=hf_...
+export GROQ_API_KEY=gsk_...
 AGENT_TYPE=smolagents dora run dataflow.yml
 ```
 
-### With LLM-powered agent (Anthropic)
+Default model is `llama-3.3-70b-versatile`. Override with:
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...
-AGENT_TYPE=smolagents dora run dataflow.yml
+SMOLAGENTS_MODEL=mixtral-8x7b-32768 AGENT_TYPE=smolagents dora run dataflow.yml
 ```
 
 ## Sending Commands
 
-The pipeline reads commands from a named pipe at `/tmp/dora-robot`.
-Use the included `robot` CLI to send them — no need to type `echo ... > /tmp/dora-robot` manually.
+Use the included `robot` CLI to send commands to the running pipeline.
 
 ### Single command
 
@@ -101,19 +99,13 @@ Use the included `robot` CLI to send them — no need to type `echo ... > /tmp/d
 > quit
 ```
 
-To use `robot` from anywhere, add the project directory to your PATH:
+To use `robot` from anywhere:
 
 ```bash
 export PATH="$PATH:/home/fayez/projects/dora-agentic-control"
 ```
 
-### Direct pipe (alternative)
-
-```bash
-echo "move forward" > /tmp/dora-robot
-```
-
-Use a custom pipe path with:
+### Custom pipe path
 
 ```bash
 ROBOT_FIFO=/tmp/my-robot dora run dataflow.yml
@@ -127,8 +119,8 @@ ROBOT_FIFO=/tmp/my-robot ./robot "move forward"
 | `move forward` | Move forward at 0.5 m/s for 2 s |
 | `move forward at 1.5` | Move forward at 1.5 m/s for 2 s |
 | `move forward for 5 seconds` | Move forward for 5 s |
-| `turn left` | Rotate 90° counterclockwise |
-| `turn right` | Rotate 90° clockwise |
+| `turn left` | Rotate exactly 90° counterclockwise (closed-loop) |
+| `turn right` | Rotate exactly 90° clockwise (closed-loop) |
 | `stop` | Halt immediately |
 | `status` | Report current position and heading |
 | `move in the shape of a square` | LLM plans and executes a square path |
@@ -146,9 +138,9 @@ pytest
 |---|---|---|
 | `AGENT_TYPE` | `mock` | Agent backend: `mock` or `smolagents` |
 | `PYBULLET_GUI` | `0` | Set to `1` to open PyBullet GUI window |
-| `HUGGINGFACE_API_TOKEN` | — | HF token for smolagents + HF Inference API |
-| `ANTHROPIC_API_KEY` | — | Anthropic API key for Claude backend |
-| `SMOLAGENTS_MODEL` | `Qwen/Qwen2.5-72B-Instruct` | HF model ID for smolagents |
+| `GROQ_API_KEY` | — | Groq API key for LLM agent |
+| `SMOLAGENTS_MODEL` | `llama-3.3-70b-versatile` | Groq model ID |
+| `ROBOT_FIFO` | `/tmp/dora-robot` | Named pipe path for robot commands |
 
 ## Extending
 
