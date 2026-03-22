@@ -1,6 +1,7 @@
 import math
 import queue
 import time
+
 from dataclasses import dataclass, field
 from typing import Tuple
 
@@ -86,6 +87,21 @@ class RobotTools:
         if duration > 0:
             desc += f" for {duration:.1f}s"
         return f"Moving: {desc}"
+
+    def turn(self, degrees: float, speed_deg_per_sec: float = 90.0) -> str:
+        """
+        Turn the robot by an exact angle.
+        degrees: positive = left (counterclockwise), negative = right (clockwise).
+        The duration is computed automatically so the angle is always correct.
+        """
+        degrees = float(max(-360.0, min(360.0, degrees)))
+        speed_deg_per_sec = float(max(10.0, min(360.0, speed_deg_per_sec)))
+        wz = math.radians(speed_deg_per_sec) * (1.0 if degrees > 0 else -1.0)
+        duration = abs(degrees) / speed_deg_per_sec
+        self.cmd_queue.put(Command("move", (0.0, 0.0, wz)))
+        time.sleep(duration)
+        self.cmd_queue.put(Command("stop"))
+        return f"Turned {degrees:+.0f} degrees"
 
     def stop(self) -> str:
         """Stop the robot immediately."""
