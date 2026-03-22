@@ -50,7 +50,7 @@ def main() -> None:
         pb, client, robot_id = _init_pybullet(gui=True)
 
     x, y, z = 0.0, 0.0, 0.25
-    yaw = 0.0
+    yaw = math.pi / 2  # face +y (up the screen in default PyBullet view)
     vx_cmd = vy_cmd = wz_cmd = 0.0
 
     def update_visual() -> None:
