@@ -21,6 +21,7 @@ def _make_smolagents_tools(robot_tools: RobotTools) -> list:
         inputs = {
             "vx": {"type": "number", "description": "Forward velocity in m/s (-2.0 to 2.0)"},
             "wz": {"type": "number", "description": "Angular velocity in rad/s (-3.14 to 3.14)", "nullable": True},
+            "duration": {"type": "number", "description": "Seconds to move before stopping automatically. Use 0 to keep moving.", "nullable": True},
         }
         output_type = "string"
 
@@ -28,8 +29,8 @@ def _make_smolagents_tools(robot_tools: RobotTools) -> list:
             self._rt = rt
             super().__init__()
 
-        def forward(self, vx: float, wz: float = 0.0) -> str:
-            return self._rt.move(vx=vx, wz=wz)
+        def forward(self, vx: float, wz: float = 0.0, duration: float = 2.0) -> str:
+            return self._rt.move(vx=vx, wz=wz, duration=duration)
 
     class StopRobotTool(Tool):
         name = "stop_robot"
