@@ -37,6 +37,14 @@ def _init_pybullet(gui: bool):
     p.setGravity(0, 0, -9.81, physicsClientId=client)
     p.loadURDF("plane.urdf", physicsClientId=client)
     robot_id = p.loadURDF("r2d2.urdf", [0, 0, 0.5], physicsClientId=client)
+    if gui:
+        p.resetDebugVisualizerCamera(
+            cameraDistance=5,
+            cameraYaw=0,
+            cameraPitch=-89,
+            cameraTargetPosition=[0, 0, 0],
+            physicsClientId=client,
+        )
     return p, client, robot_id
 
 
@@ -56,9 +64,16 @@ def main() -> None:
     def update_visual() -> None:
         if pb is None:
             return
-        quat = _euler_to_quaternion(yaw)
+        quat = _euler_to_quaternion(yaw - math.pi / 2)
         pb.resetBasePositionAndOrientation(
             robot_id, [x, y, z], quat, physicsClientId=client
+        )
+        pb.resetDebugVisualizerCamera(
+            cameraDistance=5,
+            cameraYaw=0,
+            cameraPitch=-89,
+            cameraTargetPosition=[x, y, 0],
+            physicsClientId=client,
         )
 
     for event in node:
