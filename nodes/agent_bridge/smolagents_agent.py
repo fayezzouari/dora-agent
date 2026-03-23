@@ -110,7 +110,6 @@ class SmolagentsAgent:
 
         groq_key = os.environ.get("GROQ_API_KEY")
         hf_token = os.environ.get("HUGGINGFACE_API_TOKEN")
-        model_id = os.environ.get("SMOLAGENTS_MODEL", "Qwen/Qwen2.5-72B-Instruct")
 
         if groq_key:
             # Groq exposes an OpenAI-compatible API — no extra dependency needed.
@@ -120,11 +119,14 @@ class SmolagentsAgent:
                 api_key=groq_key,
             )
         elif hf_token:
+            model_id = os.environ.get("SMOLAGENTS_MODEL", "Qwen/Qwen2.5-72B-Instruct")
             model = InferenceClientModel(model_id=model_id, token=hf_token)
         else:
-            raise ValueError(
-                "No API key found. Set GROQ_API_KEY or HUGGINGFACE_API_TOKEN, "
-                "or use AGENT_TYPE=mock for offline operation."
+            # Default: local Ollama instance
+            model = OpenAIServerModel(
+                model_id=os.environ.get("SMOLAGENTS_MODEL", "qwen3:1.7b"),
+                api_base="http://localhost:11434/v1",
+                api_key="ollama",
             )
 
         self._agent = CodeAgent(tools=tools, model=model, max_steps=3)
