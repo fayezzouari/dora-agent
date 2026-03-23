@@ -62,6 +62,24 @@ PYBULLET_GUI=1 dora run dataflow.yml
 
 The camera starts top-down. Use mouse to rotate/zoom freely — the camera follows the robot position automatically.
 
+### With local Ollama (default LLM backend)
+
+```bash
+AGENT_TYPE=smolagents dora run dataflow.yml
+```
+
+Requires [Ollama](https://ollama.com) running locally with `qwen3:1.7b` pulled:
+
+```bash
+ollama pull qwen3:1.7b
+```
+
+Override the model with:
+
+```bash
+SMOLAGENTS_MODEL=qwen3:4b AGENT_TYPE=smolagents dora run dataflow.yml
+```
+
 ### With Groq LLM agent
 
 ```bash
@@ -139,7 +157,7 @@ pytest
 | `AGENT_TYPE` | `mock` | Agent backend: `mock` or `smolagents` |
 | `PYBULLET_GUI` | `0` | Set to `1` to open PyBullet GUI window |
 | `GROQ_API_KEY` | — | Groq API key for LLM agent |
-| `SMOLAGENTS_MODEL` | `llama-3.3-70b-versatile` | Groq model ID |
+| `SMOLAGENTS_MODEL` | `qwen3:1.7b` (Ollama) / `llama-3.3-70b-versatile` (Groq) | Model ID for the active backend |
 | `ROBOT_FIFO` | `/tmp/dora-robot` | Named pipe path for robot commands |
 
 ## Extending
