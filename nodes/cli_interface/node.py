@@ -16,12 +16,17 @@ Outputs:
 import os
 import queue
 import stat
+import sys
 import threading
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+from settings import ROBOT_FIFO
 
 import pyarrow as pa
 from dora import Node
 
-FIFO_PATH = os.environ.get("ROBOT_FIFO", "/tmp/dora-robot")
+FIFO_PATH = ROBOT_FIFO
 
 BANNER = (
     "Agentic Dora — Robot Control\n"
