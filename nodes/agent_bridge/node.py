@@ -19,9 +19,9 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, Future
 from typing import Optional
 
-from dotenv import load_dotenv
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-load_dotenv()
+from settings import AGENT_TYPE
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -33,13 +33,12 @@ from mock_agent import MockAgent
 
 
 def _create_agent(robot_tools: RobotTools):
-    agent_type = os.environ.get("AGENT_TYPE", "mock").lower()
-    if agent_type == "mock":
+    if AGENT_TYPE == "mock":
         return MockAgent(robot_tools)
-    if agent_type == "smolagents":
+    if AGENT_TYPE == "smolagents":
         from smolagents_agent import SmolagentsAgent
         return SmolagentsAgent(robot_tools)
-    raise ValueError(f"Unknown AGENT_TYPE={agent_type!r}. Use 'mock' or 'smolagents'.")
+    raise ValueError(f"Unknown AGENT_TYPE={AGENT_TYPE!r}. Use 'mock' or 'smolagents'.")
 
 
 def main() -> None:
