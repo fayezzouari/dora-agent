@@ -19,6 +19,10 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, Future
 from typing import Optional
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 sys.path.insert(0, os.path.dirname(__file__))
 
 import pyarrow as pa
