@@ -1,4 +1,17 @@
 import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+from settings import (
+    GROQ_API_KEY,
+    GROQ_BASE_URL,
+    HUGGINGFACE_API_TOKEN,
+    OLLAMA_BASE_URL,
+    SMOLAGENTS_MODEL_GROQ,
+    SMOLAGENTS_MODEL_HF,
+    SMOLAGENTS_MODEL_OLLAMA,
+)
 
 try:
     from .tools import RobotTools
@@ -108,24 +121,18 @@ class SmolagentsAgent:
 
         tools = _make_smolagents_tools(robot_tools)
 
-        groq_key = os.environ.get("GROQ_API_KEY")
-        hf_token = os.environ.get("HUGGINGFACE_API_TOKEN")
-
-        if groq_key:
-            # Groq exposes an OpenAI-compatible API — no extra dependency needed.
+        if GROQ_API_KEY:
             model = OpenAIServerModel(
-                model_id=os.environ.get("SMOLAGENTS_MODEL", "llama-3.3-70b-versatile"),
-                api_base="https://api.groq.com/openai/v1",
-                api_key=groq_key,
+                model_id=SMOLAGENTS_MODEL_GROQ,
+                api_base=GROQ_BASE_URL,
+                api_key=GROQ_API_KEY,
             )
-        elif hf_token:
-            model_id = os.environ.get("SMOLAGENTS_MODEL", "Qwen/Qwen2.5-72B-Instruct")
-            model = InferenceClientModel(model_id=model_id, token=hf_token)
+        elif HUGGINGFACE_API_TOKEN:
+            model = InferenceClientModel(model_id=SMOLAGENTS_MODEL_HF, token=HUGGINGFACE_API_TOKEN)
         else:
-            # Default: local Ollama instance
             model = OpenAIServerModel(
-                model_id=os.environ.get("SMOLAGENTS_MODEL", "qwen3:1.7b"),
-                api_base="http://localhost:11434/v1",
+                model_id=SMOLAGENTS_MODEL_OLLAMA,
+                api_base=OLLAMA_BASE_URL,
                 api_key="ollama",
             )
 
