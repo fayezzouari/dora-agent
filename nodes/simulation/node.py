@@ -16,6 +16,10 @@ Outputs:
 import math
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import pyarrow as pa
 from dora import Node
 
