@@ -15,10 +15,11 @@ Outputs:
 
 import math
 import os
+import sys
 
-from dotenv import load_dotenv
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-load_dotenv()
+from settings import PYBULLET_GUI
 
 import pyarrow as pa
 from dora import Node
@@ -55,7 +56,7 @@ def _init_pybullet(gui: bool):
 def main() -> None:
     node = Node()
 
-    gui_mode = os.environ.get("PYBULLET_GUI", "0") == "1"
+    gui_mode = PYBULLET_GUI
     pb = client = robot_id = None
 
     if gui_mode:
